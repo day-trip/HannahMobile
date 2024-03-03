@@ -1,6 +1,6 @@
 import {KeyboardAvoidingView, Platform, SafeAreaView, TextInput, TouchableOpacity} from "react-native";
 import {Ionicons} from "@expo/vector-icons";
-import React, {useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {LinearGradient} from 'expo-linear-gradient';
 import {Link} from "expo-router";
 import {StatusBar} from "expo-status-bar";
@@ -10,8 +10,30 @@ import FlatList = Animated.FlatList;
 import View = Animated.View;
 import Text = Animated.Text;
 import { Image } from 'expo-image';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {HoldItem, HoldMenuProvider} from "react-native-hold-menu";
+
+type Message = {
+    id: string,
+    role: "user" | "assistant",
+    content: string,
+    timestamp: string,
+}
+
+const INITIAL: Message = {
+    "id": "qwehjksdfn13",
+    "role": "assistant",
+    "content": "👋\nHi, I'm Hannah! I'm here to help you find a date and make new friends.\nWhich school do you go to?",
+    "timestamp": "2024-03-01T08:00:00Z"
+}
 
 const messages = [
+    {
+        "id": "qwehjksdfn13",
+        "role": "assistant",
+        "content": "Hi, I'm Hannah! I'm here to help you find a date, or just make some new friends.\nWhich school do you go to?",
+        "timestamp": "2024-03-01T08:00:00Z"
+    },
     {
         "id": "qwehjksdfn12",
         "role": "user",
@@ -171,7 +193,18 @@ const messages = [
 ];
 
 export default function Index() {
-    const [user, setUser] = useState<null | string>("a43ef9f7-f6c5-48b3-9007-6675d9ec7158");
+    const [user, setUser] = useState<null | string>(null); // "a43ef9f7-f6c5-48b3-9007-6675d9ec7158"
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [stage, setStage] = useState("initial");
+    const [message, setMessage] = useState("");
+
+    useEffect(() => {
+        void (async () => {
+            const msgs = await AsyncStorage.getItem("messages");
+            setMessages(msgs ? JSON.parse(msgs) : [INITIAL]);
+            setStage((await AsyncStorage.getItem("stage")) || "initial");
+        })();
+    }, []);
 
     return <>
         <SafeAreaView style={{backgroundColor: "rgb(255 251 235)", height: "100%"}}>
@@ -184,31 +217,53 @@ export default function Index() {
                         <Image style={{width: 38, height: 38, borderRadius: 25}} source={`https://hannah-pfp.s3.us-east-1.amazonaws.com/${user}.jpeg`}/>
                     </TouchableOpacity>
                 </Link>}
-                {!user && <TouchableOpacity style={{width: 40, height: 40, borderRadius: 25, backgroundColor: 'rgb(251 113 133)', justifyContent: 'center', alignItems: 'center', position: "absolute", left: 15, zIndex: 100}}>
-                    <Ionicons name="person-outline" size={24} color="white" />
-                </TouchableOpacity>}
 
                 <KeyboardAvoidingView keyboardVerticalOffset={75} behavior="padding" style={{backgroundColor: "", height: "100%", flex: 1, gap: 0, flexDirection: "column"}}>
-                    <FlatList indicatorStyle="black" scrollIndicatorInsets={{right: 2}} style={{backgroundColor: "", paddingTop: 0, paddingHorizontal: 15}} data={messages.map((message, index) => ({...message, index}))} renderItem={(item) => <Message item={item.item}/>}/>
+                    <HoldMenuProvider safeAreaInsets={{left: 5, right: 5, top: 5, bottom: 5}} theme="dark">
+                        <FlatList indicatorStyle="black" scrollIndicatorInsets={{right: 2}} style={{backgroundColor: "", paddingTop: 0, paddingHorizontal: 15}} data={messages} renderItem={(item) => <Message item={item.item} index={item.index} user={user}/>}/>
+                    </HoldMenuProvider>
 
-                    <TextInput placeholder='Talk to Hannah' style={{backgroundColor: "white", fontFamily: "Cambria", borderRadius: 30, borderWidth: 0.5, borderColor: "rgb(251 113 133)", paddingHorizontal: 20, paddingVertical: 14, width: "96%", fontSize: 19, marginHorizontal: "2%"}} placeholderTextColor="rgb(156 163 175)"/>
-                    <TouchableOpacity style={{width: 40, height: 40, borderRadius: 25, backgroundColor: 'rgb(251 113 133)', justifyContent: 'center', alignItems: 'center', marginTop: -46, marginLeft: "87.5%"}}>
-                        <Ionicons name="arrow-up-outline" size={24} color="white" />
-                    </TouchableOpacity>
+                    <View style={{width: "100%", paddingHorizontal: 5, flexDirection: "row", alignItems: "center", backgroundColor: "", position: "relative"}}>
+                        <TextInput returnKeyType='send' value={message} onChangeText={setMessage} placeholder='Talk to Hannah' style={{backgroundColor: "white", fontFamily: "Cambria", borderRadius: 30, borderWidth: 0.5, borderColor: "rgb(251 113 133)", paddingHorizontal: 20, paddingVertical: 14, flex: 1, fontSize: 19}} placeholderTextColor="rgb(156 163 175)"/>
+                        <TouchableOpacity onPress={() => {setMessages([...messages, {id: Math.random() * 1000 + "_id", role: "user", content: message, timestamp: "now"}])}} style={{width: 40, height: 40, borderRadius: 25, backgroundColor: 'rgb(251 113 133)', justifyContent: 'center', alignItems: 'center', position: "absolute", zIndex: 50, right: 10}}>
+                            <Ionicons name="arrow-up-outline" size={24} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </KeyboardAvoidingView>
 
-                <LinearGradient colors={['rgb(255 251 235)', 'rgba(255, 255, 255, 0)']} locations={[0.01, 0.15]} style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 50}}/>
+                <LinearGradient colors={['rgb(255 251 235)', 'rgba(255, 255, 255, 0)']} locations={[0.01, user ? 0.15 : 0.05]} style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 50}}/>
             </GestureHandlerRootView>
         </SafeAreaView>
         <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'auto'}/>
     </>
 }
 
-const Message = ({item}: {item: {content: string, id: string, role: string, timestamp: string, index: number}}) => {
+type Line = {
+    text: string;
+    emojis: boolean;
+}
+
+const MenuItems = [
+    { text: 'Actions', icon: 'home', isTitle: true, onPress: () => {} },
+    { text: 'Action 1', icon: 'edit', onPress: () => {} },
+    { text: 'Action 2', icon: 'map-pin', withSeparator: true, onPress: () => {} },
+    { text: 'Action 3', icon: 'trash', isDestructive: true, onPress: () => {} },
+];
+
+const Message = ({item, user, index}: {item: {content: string, id: string, role: string, timestamp: string}, index: number, user: string | null}) => {
     const position = useSharedValue(0);
     const open = useSharedValue(false);
 
-    const panGesture = Gesture.Pan()
+    /*const emojis = useMemo(() => /^\p{Extended_Pictographic}+$/u.test(item.content) && Array.from(item.content).length <= 3, [item]);
+    console.log(emojis, "EMO");*/
+    const lines = useMemo<Line[]>(() => {
+        if (item.role === "user") {
+            return [{text: item.content, emojis: /^\p{Extended_Pictographic}+$/u.test(item.content) && Array.from(item.content).length <= 3}];
+        }
+        return item.content.split("\n").map(x => ({text: x, emojis: /^\p{Extended_Pictographic}+$/u.test(x) && Array.from(x).length <= 3}));
+    }, [item]);
+
+    /*const panGesture = Gesture.Pan()
         .onUpdate((e) => {
             if (e.translationX > 0) {
                 return;
@@ -234,19 +289,23 @@ const Message = ({item}: {item: {content: string, id: string, role: string, time
                 console.log("REPLIED!");
             }
             open.value = false;
-        });
+        });*/
+
+    const panGesture = Gesture.Pan();
 
     const animatedStyle = useAnimatedStyle(() => ({
         transform: [{ translateX: position.value }],
     }));
 
     return item.role === "user" ?
-        <View style={{flex: 1, flexDirection: "row", justifyContent: "flex-end", marginBottom: 12, marginTop: item.index === 0 ? 90 : 0}}>
-            <GestureDetector gesture={panGesture}>
-                <View style={[{borderRadius: 10, backgroundColor: "rgb(254 205 211)", padding: 10}, animatedStyle]}>
-                    <Text style={{fontSize: 21, fontFamily: "Cambria"}}>{item.content}</Text>
-                </View>
-            </GestureDetector>
-        </View>
-        : <Text style={{fontSize: 21, fontFamily: "Cambria", marginBottom: 12}}>{item.content}</Text>
+        <HoldItem items={MenuItems}>
+            <View style={{flex: 1, flexDirection: "row", justifyContent: "flex-end", marginBottom: 12, marginTop: index === 0 ? 90 : 0}}>
+                <GestureDetector gesture={panGesture}>
+                    <View style={[{borderRadius: 10, backgroundColor: lines[0].emojis ? "transparent" : "rgb(254 205 211)", padding: 10}, animatedStyle]}>
+                        <Text style={{fontSize: lines[0].emojis ? 40 : 21, fontFamily: "Cambria"}}>{lines[0].text}</Text>
+                    </View>
+                </GestureDetector>
+            </View>
+        </HoldItem>
+        : <FlatList data={lines} renderItem={(line) => <Text style={{fontSize: line.item.emojis ? 40 : 21, fontFamily: "Cambria", marginBottom: 12, marginTop: index === 0 && line.index === 0 ? (user ? 90 : 40) : 0}}>{line.item.text}</Text>}/>
 }
