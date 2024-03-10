@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Sso - OneDrive</title>
+
+    <meta name="theme-color" content="#ffffff">
+    <link rel="apple-touch-icon" sizes="180x180" href="//cdn.classlink.com/production/launchpad/resources/images/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" href="//cdn.classlink.com/production/launchpad/resources/images/favicon/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="//cdn.classlink.com/production/launchpad/resources/images/favicon/favicon-16x16.png" sizes="16x16">
+    <link rel="manifest" href="//cdn.classlink.com/production/launchpad/resources/images/favicon/manifest.json">
+    <link rel="mask-icon" href="//cdn.classlink.com/production/launchpad/resources/images/favicon/safari-pinned-tab.svg" color="#5bbad5">
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://launchpad.classlink.com//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://launchpad.classlink.com//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap-theme.min.css">
+
+    <link rel="stylesheet" href="https://launchpad.classlink.com/css/loader.css">
+    <link rel="stylesheet" href="https://launchpad.classlink.com/resources/browser_extension.css">
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+    <script>
+        var IdConfig = {
+            user: {
+                id: 42498805,
+                default_language: 'en'
+            },
+            gwstokenMd5: "7bde99178befe390dfc1d471b38c8539",
+            proxies: {
+                api: '/proxies/api'
+            },
+            browser_extension: '{"id":"57078","ie":{"latest_version":"4.3","last_mandatory_version":"4.3"},"safari":{"latest_version":"3.9","last_mandatory_version":"3.9"},"chrome":{"latest_version":"5.9","last_mandatory_version":"5.9"},"edge":{"latest_version":"1.5.3.1","last_mandatory_version":"1.5.3.1"},"firefox":{"latest_version":"8.0","last_mandatory_version":"8.0"}}',
+            appResponse: JSON.parse('{"status":1,"message":"Success","app_id":1841402,"name":"OneDrive","image":"//filescdn.classlink.com/resources/icons/default/skydrive.png","extension_id":163839,"login_url":"https://example.com","logout_url":"","no_iframe_for_logout":0,"advance_sso":1,"advance_sso_json":{"tasks":[{"args":{"elseThenSkipTo":"email_screen","selector":"#otherTile","timeout":1000,"waitForIt":true},"type":"ifSelector"},{"args":"#otherTile","type":"click"},{"args":{"selector":"input[type=\'email\']","timeout":60000,"value":"#i0116","waitForIt":true},"id":"email_screen","type":"input"},{"args":{"selector":"input[type=\'submit\']","timeout":60000,"waitForIt":true},"type":"click"},{"args":{"elseThenSkipTo":"password_screen","selector":"#pickerDescription","timeout":10000,"waitForIt":true},"type":"ifSelector"},{"args":{"url":["https://login.microsoftonline.com/common/oauth2/authorize","https://login.live.com/oauth20_authorize.srf"],"timeout":5000},"type":"waitForUrlTimeout"},{"args":{"hitEnter":true,"selector":"input[type=\'password\']","timeout":60000,"value":"#i0118","waitForIt":true},"type":"input","id":"password_screen"},{"args":{"attributes":{"disabled":"{falsy}"},"selector":"form input[type=\'submit\']","timeout":60000,"waitForIt":true},"type":"click"},{"args":"https://login.microsoftonline.com/common/login","type":"waitForUrl"},{"args":{"attributes":{"disabled":"{falsy}"},"selector":"input[type=\'submit\']","timeout":60000,"waitForIt":true},"type":"click"}]},"pre_auth_script":"alert(window.location)","post_auth_script":"","preauth_delay":null,"postauth_delay":null,"selectors":[{"id":366030,"sel":"#i0116","type":"hidden","hidden":1,"label":"Email Address","order":1,"value":"U2FsdGVkX1+j22yP3OjeMuI9F4V2pFarw5PR18M19bTzVc+y7zhGf/4MipNHJxKj"},{"id":366031,"sel":"#i0118","type":"hidden","hidden":1,"label":"Password","order":2,"value":"U2FsdGVkX1+Pl8OBy1rMBX6uGKneYaL8uEu9/ZyyV1k="}],"userauth":[]}'),
+            noSso: 0,
+            iedebug: 0,
+            gwstoken: "ff88f190-5877-4b20-ab41-ce512ff96ff0"
+        };
+
+        var IdTranslation = {
+            required_fields: 'Fields marked as * are required',
+            modal_title: 'ClassLink Browser Extension',
+            modal_details: 'Signing into your account, please wait.',
+            invalid_selector: 'Invalid selector __REPLACE__',
+            invalid_submit_selector: 'Invalid selector __REPLACE__'
+        };
+        IdTranslation.required_fields = IdTranslation.required_fields.replace('*', '<span style="color: red">*</span>');
+    </script>
+</head>
+
+<body>
+<div id="welcome_ploadingpanel" style="display: block;">
+    <div class="dcenter">
+        <div class="ploadingpanelt">
+            <img src="//filescdn.classlink.com/resources/loading_1.gif" width="32px" height="32px" align="absmiddle" /> Loading Application
+        </div>
+    </div>
+</div>
+<div class="container">
+    <div class="invalid-app box1" style="display: none">
+        <h2 class="box-title">Invalid application</h2>
+        <p>Application with application id 1841402 doesn't exist</p>
+    </div>
+    <div class="invalid-app box1" style="display: none">
+        <h2 class="box-title">Invalid application</h2>
+        <p>Application with application id 1841402 doesn't exist</p>
+    </div>
+
+    <div class="no-extension box1" style="display: none">
+        <h2 class="box-title">ClassLink Browser Extension not installed or enabled</h2>
+        <div>
+            <img class="img-rounded app-icon" src="//filescdn.classlink.com/resources/icons/default/skydrive.png" alt="" />
+            <h3>OneDrive</h3>
+            <p>This application requires the ClassLink Browser Extension for Single Sign-On. It is either not installed, or not enabled.</p>
+
+            <div class="clear"></div>
+
+            <div class="browser-detected">
+                <div class="mozilla">
+                    Mozilla Firefox detected
+                </div>
+                <div class="chrome">
+                    Google Chrome detected
+                </div>
+                <div class="edge-chromium">
+                    Microsoft Edge detected
+                </div>
+                <div class="safari">
+                    Safari detected
+                </div>
+                <div class="msie">
+                    Internet Explorer detected
+                </div>
+                <div class="opera">
+                    Opera detected
+                </div>
+            </div>
+
+            <p>
+                <label><input type="checkbox" class="dont_ask_again" /> Don't ask me again</label>
+            </p>
+
+        </div>
+        <div class="box-footer">
+            <a href="#" class="btn btn-default js-btn-continue-to-site">Continue to website</a>
+            <a href="" class="btn btn-default js-btn-check-again">Check again</a>
+            <a href="#" class="btn btn-primary js-btn-install-extension">Install Extension</a>
+        </div>
+    </div>
+
+    <div class="user-new-credential box1" style="display: none">
+        <h2 class="box-title">Would you like to save your login?</h2>
+        <img class="img-rounded app-icon" src="https://launchpad.classlink.com//filescdn.classlink.com/resources/icons/default/skydrive.png" alt="" />
+        <h3>OneDrive</h3>
+        <p>You can save your login for this application to auto login on your next visit</p>
+
+        <div class="clear"></div>
+
+        <form role="form" onsubmit="return false;">
+            <div class="fields">
+
+            </div>
+            <div class="box-footer">
+                <a href="#" class="btn btn-default js-btn-skip">Skip</a>
+                <button type="submit" data-activetext="Saving" data-normaltext="Save" class="btn btn-primary js-btn-save">Save</button>
+            </div>
+        </form>
+    </div>
+    <div class="user-multiple-credentials box1" style="display: none;">
+        <div class="alert alert-warning">
+            <small style="font-size: 70%"><strong>Warning!</strong> Previously logged in accounts will be chosen unless they are logged out.</small>
+        </div>
+        <h2 class="box-title">Please choose an account</h2>
+        <div class="user-credentials"></div>
+    </div>
+</div>
+<script src="https://launchpad.classlink.com//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+<script type="text/javascript" src="https://launchpad.classlink.com/resources/jquery-migrate.js"></script>
+<script type="text/javascript" src="https://launchpad.classlink.com/resources/jquery.cookie.js"></script>
+<script type="text/javascript" src="https://launchpad.classlink.com//ajax.aspnetcdn.com/ajax/jquery.validate/1.12.0/jquery.validate.min.js"></script>
+<script type="text/javascript" src="https://launchpad.classlink.com/resources/browser_extension.js?t=1709818782866"></script>
+<script type="text/javascript" src="https://launchpad.classlink.com/resources/crypto_aes.js"></script>
+
+</body>
+
+</html>

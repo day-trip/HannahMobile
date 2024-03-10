@@ -1,29 +1,31 @@
 import {KeyboardAvoidingView, Platform, SafeAreaView, TextInput, TouchableOpacity} from "react-native";
 import {Ionicons} from "@expo/vector-icons";
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import {LinearGradient} from 'expo-linear-gradient';
 import {Link} from "expo-router";
 import {StatusBar} from "expo-status-bar";
-import {Gesture, GestureDetector, GestureHandlerRootView} from "react-native-gesture-handler";
-import Animated, {useAnimatedStyle, useSharedValue, withTiming} from "react-native-reanimated";
-import FlatList = Animated.FlatList;
-import View = Animated.View;
-import Text = Animated.Text;
-import { Image } from 'expo-image';
+import {GestureHandlerRootView} from "react-native-gesture-handler";
+import Animated from "react-native-reanimated";
+import {Image} from 'expo-image';
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {HoldItem, HoldMenuProvider} from "react-native-hold-menu";
+import uuid from "react-native-uuid";
+import FlatList = Animated.FlatList;
+import * as Contacts from "expo-contacts";
+import {MessageBox, OptionsMessageBox, SearchMessageBox} from "@/components/MessageBox";
+import {Message} from "@/components/Message";
+import {getUserIdentity} from "expo-user-identity";
 
 type Message = {
     id: string,
     role: "user" | "assistant",
     content: string,
-    timestamp: string,
+    timestamp: string | number,
 }
 
 const INITIAL: Message = {
     "id": "qwehjksdfn13",
     "role": "assistant",
-    "content": "👋\nHi, I'm Hannah! I'm here to help you find a date and make new friends.\nWhich school do you go to?",
+    "content": "👋\nHi, I'm Hannah! I'm here to help you find a date and make new friends.\nLet's play a game... Tell me name of one of your friends and I'll try to guess who you are.",
     "timestamp": "2024-03-01T08:00:00Z"
 }
 
@@ -192,120 +194,265 @@ const messages = [
     }
 ];
 
+export const SCHOOLS = [
+    'Keller Elementary',
+    'Juanita Elementary',
+    'Twain Elementary',
+    'Rush Elementary',
+    'McAuliffe Elementary',
+    'Bell Elementary',
+    'Alcott Elementary',
+    'Kirk Elementary',
+    'Einstein Elementary',
+    'Rockwell Elementary',
+    'Rose Hill Elementary',
+    'Franklin Elementary',
+    'Dickinson Elementary',
+    'Thoreau Elementary',
+    'Summer School',
+    'Sandburg Elementary',
+    'Redmond Elementary',
+    'Baker Elementary',
+    'Barton Elementary',
+    'Smith Elementary',
+    'Muir Elementary',
+    'Carson Elementary',
+    'Wilder Elementary',
+    'Mead Elementary',
+    'Special Services',
+    'Lakeview Elementary',
+    'Rosa Parks Elementary',
+    'Audubon Elementary',
+    'Mann Elementary',
+    'Discovery Elementary',
+    'Frost Elementary',
+    'Blackwell Elementary',
+    'Community School',
+    'Explorer Elementary',
+    'Emerson K-12',
+    'Contractual School',
+    'Environmental',
+    'Timberline Middle School',
+    'Redmond Middle School',
+    'Rose Hill Middle School',
+    'Finn Hill Middle School',
+    'Kamiakin Middle School',
+    'Evergreen Middle School',
+    'Kirkland Middle School',
+    'Inglewood Middle School',
+    'International',
+    'Stella Schola',
+    'Northstar Middle School',
+    'Renaissance',
+    'Eastlake High School',
+    'WaNIC Summer School',
+    'Redmond High School',
+    'Lake Washington High School',
+    'STEM School',
+    'Emerson High School',
+    'WaNIC Skill Center',
+    'WaNIC Skill Center',
+    'WaNIC Summer School',
+    'Futures School',
+];
+
 export default function Index() {
+    const [loadingData, setLoadingData] = useState(true);
+
     const [user, setUser] = useState<null | string>(null); // "a43ef9f7-f6c5-48b3-9007-6675d9ec7158"
     const [messages, setMessages] = useState<Message[]>([]);
     const [stage, setStage] = useState("initial");
     const [message, setMessage] = useState("");
 
-    useEffect(() => {
+    const [friend, setFriend] = useState<any | null>(null);
+    const [friends, setFriends] = useState<any[]>([]);
+
+    const [school, setSchool] = useState<number | null>(null);
+    const [grade, setGrade] = useState<number | null>(null);
+
+    const loadData = useCallback(() => {
         void (async () => {
+            console.log("Reloading...");
+            setLoadingData(true);
+
             const msgs = await AsyncStorage.getItem("messages");
             setMessages(msgs ? JSON.parse(msgs) : [INITIAL]);
+
             setStage((await AsyncStorage.getItem("stage")) || "initial");
+
+            const fds = await AsyncStorage.getItem("friends");
+            setFriends(fds ? JSON.parse(fds) : []);
+
+            const sc = await AsyncStorage.getItem("school");
+            setSchool(sc ? Number.parseInt(sc) : null);
+
+            const gr = await AsyncStorage.getItem("grade");
+            setGrade(gr ? Number.parseInt(gr) : null);
+
+            setLoadingData(false);
         })();
     }, []);
 
-    return <>
-        <SafeAreaView style={{backgroundColor: "rgb(255 251 235)", height: "100%"}}>
-            <GestureHandlerRootView style={{height: "100%", position: "relative"}}>
-                {user && <TouchableOpacity style={{width: 40, height: 40, borderRadius: 25, backgroundColor: 'rgb(251 113 133)', justifyContent: 'center', alignItems: 'center', position: "absolute", left: 15, zIndex: 100}}>
-                    <Ionicons name="home-outline" size={24} color="white" />
-                </TouchableOpacity>}
-                {user && <Link href="/modal" asChild>
-                    <TouchableOpacity style={{width: 40, height: 40, borderRadius: 25, borderWidth: 1, borderColor: "rgb(251 113 133)", justifyContent: 'center', alignItems: 'center', position: "absolute", right: 15, zIndex: 100}}>
-                        <Image style={{width: 38, height: 38, borderRadius: 25}} source={`https://hannah-pfp.s3.us-east-1.amazonaws.com/${user}.jpeg`}/>
-                    </TouchableOpacity>
-                </Link>}
+    useEffect(() => {
+        loadData();
 
-                <KeyboardAvoidingView keyboardVerticalOffset={75} behavior="padding" style={{backgroundColor: "", height: "100%", flex: 1, gap: 0, flexDirection: "column"}}>
-                    <HoldMenuProvider safeAreaInsets={{left: 5, right: 5, top: 5, bottom: 5}} theme="dark">
-                        <FlatList indicatorStyle="black" scrollIndicatorInsets={{right: 2}} style={{backgroundColor: "", paddingTop: 0, paddingHorizontal: 15}} data={messages} renderItem={(item) => <Message item={item.item} index={item.index} user={user}/>}/>
-                    </HoldMenuProvider>
+        (async () => {
+            /*const { status } = await Contacts.requestPermissionsAsync();
+            if (status === 'granted') {
+                const { data } = await Contacts.getContactsAsync({fields: [Contacts.Fields.Emails, Contacts.Fields.PhoneNumbers, Contacts.Fields.Relationships, Contacts.Fields.SocialProfiles],});
 
-                    <View style={{width: "100%", paddingHorizontal: 5, flexDirection: "row", alignItems: "center", backgroundColor: "", position: "relative"}}>
-                        <TextInput returnKeyType='send' value={message} onChangeText={setMessage} placeholder='Talk to Hannah' style={{backgroundColor: "white", fontFamily: "Cambria", borderRadius: 30, borderWidth: 0.5, borderColor: "rgb(251 113 133)", paddingHorizontal: 20, paddingVertical: 14, flex: 1, fontSize: 19}} placeholderTextColor="rgb(156 163 175)"/>
-                        <TouchableOpacity onPress={() => {setMessages([...messages, {id: Math.random() * 1000 + "_id", role: "user", content: message, timestamp: "now"}])}} style={{width: 40, height: 40, borderRadius: 25, backgroundColor: 'rgb(251 113 133)', justifyContent: 'center', alignItems: 'center', position: "absolute", zIndex: 50, right: 10}}>
-                            <Ionicons name="arrow-up-outline" size={24} color="white" />
-                        </TouchableOpacity>
-                    </View>
-                </KeyboardAvoidingView>
+                const contacts = data.map(contact => {
+                    const phone = contact.phoneNumbers ? contact.phoneNumbers.filter(phone => phone.countryCode === "us")[0]?.digits ?? undefined : undefined;
+                    const emails = contact.emails ? contact.emails.map(email => email.email) : [];
 
-                <LinearGradient colors={['rgb(255 251 235)', 'rgba(255, 255, 255, 0)']} locations={[0.01, user ? 0.15 : 0.05]} style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 50}}/>
-            </GestureHandlerRootView>
-        </SafeAreaView>
-        <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'auto'}/>
-    </>
-}
+                    return {name: contact.name, phone, emails};
+                });
 
-type Line = {
-    text: string;
-    emojis: boolean;
-}
+                console.log(contacts);
+            }*/
+            console.log(await getUserIdentity());
+        })();
+    }, []);
 
-const MenuItems = [
-    { text: 'Actions', icon: 'home', isTitle: true, onPress: () => {} },
-    { text: 'Action 1', icon: 'edit', onPress: () => {} },
-    { text: 'Action 2', icon: 'map-pin', withSeparator: true, onPress: () => {} },
-    { text: 'Action 3', icon: 'trash', isDestructive: true, onPress: () => {} },
-];
+    useEffect(() => {
+        void AsyncStorage.setItem("stage", stage);
+    }, [stage]);
 
-const Message = ({item, user, index}: {item: {content: string, id: string, role: string, timestamp: string}, index: number, user: string | null}) => {
-    const position = useSharedValue(0);
-    const open = useSharedValue(false);
-
-    /*const emojis = useMemo(() => /^\p{Extended_Pictographic}+$/u.test(item.content) && Array.from(item.content).length <= 3, [item]);
-    console.log(emojis, "EMO");*/
-    const lines = useMemo<Line[]>(() => {
-        if (item.role === "user") {
-            return [{text: item.content, emojis: /^\p{Extended_Pictographic}+$/u.test(item.content) && Array.from(item.content).length <= 3}];
+    useEffect(() => {
+        if (school) {
+            void AsyncStorage.setItem("school", String(school));
         }
-        return item.content.split("\n").map(x => ({text: x, emojis: /^\p{Extended_Pictographic}+$/u.test(x) && Array.from(x).length <= 3}));
-    }, [item]);
+    }, [school]);
 
-    /*const panGesture = Gesture.Pan()
-        .onUpdate((e) => {
-            if (e.translationX > 0) {
-                return;
-            }
-            if (e.translationX < -100) {
-                return;
-            }
-            if (e.translationX < -75) {
-                if (!open.value) {
-                    console.log("SELECTED!");
+    useEffect(() => {
+        if (grade) {
+            void AsyncStorage.setItem("grade", String(grade));
+        }
+    }, [grade]);
 
-                    // Haptics.notificationAsync(NotificationFeedbackType.Success).catch(e => console.log(e));
-                    open.value = true;
+    useEffect(() => {
+        if (messages.length > 1) {
+            void AsyncStorage.setItem("messages", JSON.stringify(messages));
+        }
+    }, [messages]);
+
+    useEffect(() => {
+        if (friends.length > 1) {
+            void AsyncStorage.setItem("friends", JSON.stringify(friends));
+        }
+    }, [friends]);
+
+    const send = async () => {
+        setMessage("");
+        if (stage === "initial") {
+            try {
+                setFriends(friends => ([...friends, friend]));
+                setMessages([...messages, {role: "user", content: message, timestamp: Date.now(), id: uuid.v4() as string}, {role: "assistant", id: uuid.v4() as string, timestamp: Date.now(), content: `Are you in ${SCHOOLS[friend.school]} as well?`}]);
+                setStage("school_ask_ai");
+            } catch (e) {
+                console.log(Object.values(e as any));
+            }
+        }
+        if (stage === "school_ask_ai") {
+            const data: {type: number, school?: string} = await (await fetch("http://10.0.4.38:3000/ai/schools", {
+                method: "POST",
+                body: JSON.stringify({
+                    assistant: messages[messages.length - 1].content,
+                    user: message
+                }),
+                headers: {
+                    "Content-Type": "application/json",
                 }
-            } else {
-                open.value = false;
+            })).json();
+            console.log(data);
+            const text = data.type === 1 ? "Ok, who is another one of your friends?" : data.type === 2 ? "No worries! Please tell me which school you attend." : data.type === 3 ? "Ok, who is another one of your friends?" : data.type === 4 ? "aw shoot what now" : "Chill out dude. I'm just asking which school you go to.";
+            setMessages([...messages, {role: "user", content: message, timestamp: Date.now(), id: uuid.v4() as string}, {role: "assistant", id: uuid.v4() as string, timestamp: Date.now(), content: text}]);
+            if (data.type === 1) {
+                setSchool(friend.school);
+                setStage("friend_ask");
             }
-            position.value = e.translationX;
-        })
-        .onEnd((e) => {
-            position.value = withTiming(0, { duration: 100 });
-            if (open.value) {
-                console.log("REPLIED!");
+            if (data.type === 3) {
+                setSchool(SCHOOLS.indexOf(data.school!));
+                setStage("friend_ask");
             }
-            open.value = false;
-        });*/
+            if (data.type === 2 || data.type === 5) {
+                setStage("school_ask");
+            }
+        }
+        if (stage === "school_ask") {
+            setMessages([...messages, {role: "user", content: message, timestamp: Date.now(), id: uuid.v4() as string}, {role: "assistant", id: uuid.v4() as string, timestamp: Date.now(), content: "Ok, who is another one of your friends?"}]);
+            setSchool(SCHOOLS.indexOf(message));
+            setStage("friend_ask");
+        }
+        if (stage === "friend_ask") {
+            setFriends(friends => ([...friends, friend]));
+            const oldest = Math.max(friends[0].grade, friend.grade);
+            const m: Message[] = [...messages, {role: "user", content: message, timestamp: Date.now(), id: uuid.v4() as string}, {role: "assistant", id: uuid.v4() as string, timestamp: Date.now(), content: `Are you in ${oldest}th grade?`}];
+            setMessages(m);
+            setStage("grade_ask_ai");
+        }
+        if (stage === "grade_ask_ai") {
+            const data: {type: number, grade?: number} = await (await fetch("http://10.0.4.38:3000/ai/grades", {
+                method: "POST",
+                body: JSON.stringify({
+                    assistant: messages[messages.length - 1].content,
+                    user: message
+                }),
+                headers: {
+                    "Content-Type": "application/json",
+                }
+            })).json();
+            console.log(data);
 
-    const panGesture = Gesture.Pan();
+            const text = data.type === 1 ? "Thanks! I think I have an idea on who you might be." : data.type === 2 ? "Please tell me which grade you're in." : data.type === 3 ? "Thanks! I think I have an idea on who you might be." : data.type === 4 ? "aw shoot now what" : "Bro calm down. I'm just asking for your grade";
+            setMessages([...messages, {role: "user", content: message, timestamp: Date.now(), id: uuid.v4() as string}, {role: "assistant", id: uuid.v4() as string, timestamp: Date.now(), content: text}]);
 
-    const animatedStyle = useAnimatedStyle(() => ({
-        transform: [{ translateX: position.value }],
-    }));
+            if (data.type === 1) {
+                setGrade(Math.max(friends[0].grade, friends[1].grade));
+                setStage("name_attempt");
+            }
+            if (data.type === 3) {
+                setGrade(data.grade!);
+                setStage("name_attempt");
+            }
+            if (data.type === 2 || data.type === 5) {
+                setStage("grade_ask");
+            }
+        }
+        if (stage === "grade_ask") {
+            setMessages([...messages, {role: "user", content: message, timestamp: Date.now(), id: uuid.v4() as string}, {role: "assistant", id: uuid.v4() as string, timestamp: Date.now(), content: "Thanks! I think I have an idea on who you might be."}]);
+            setGrade(Number.parseInt(message));
+            setStage("name_attempt");
+        }
+    }
 
-    return item.role === "user" ?
-        <HoldItem items={MenuItems}>
-            <View style={{flex: 1, flexDirection: "row", justifyContent: "flex-end", marginBottom: 12, marginTop: index === 0 ? 90 : 0}}>
-                <GestureDetector gesture={panGesture}>
-                    <View style={[{borderRadius: 10, backgroundColor: lines[0].emojis ? "transparent" : "rgb(254 205 211)", padding: 10}, animatedStyle]}>
-                        <Text style={{fontSize: lines[0].emojis ? 40 : 21, fontFamily: "Cambria"}}>{lines[0].text}</Text>
-                    </View>
-                </GestureDetector>
-            </View>
-        </HoldItem>
-        : <FlatList data={lines} renderItem={(line) => <Text style={{fontSize: line.item.emojis ? 40 : 21, fontFamily: "Cambria", marginBottom: 12, marginTop: index === 0 && line.index === 0 ? (user ? 90 : 40) : 0}}>{line.item.text}</Text>}/>
+    console.log(stage)
+
+    return <>
+            <SafeAreaView style={{backgroundColor: "rgb(255 251 235)", height: "100%"}}>
+                <GestureHandlerRootView style={{height: "100%", position: "relative"}}>
+                    {user && <TouchableOpacity activeOpacity={0.7} style={{width: 40, height: 40, borderRadius: 25, backgroundColor: 'rgb(251 113 133)', justifyContent: 'center', alignItems: 'center', position: "absolute", left: 15, zIndex: 100}}>
+                        <Ionicons name="home-outline" size={24} color="white" />
+                    </TouchableOpacity>}
+                    {user && <Link href="/modal" asChild>
+                        <TouchableOpacity style={{width: 40, height: 40, borderRadius: 25, borderWidth: 1, borderColor: "rgb(251 113 133)", justifyContent: 'center', alignItems: 'center', position: "absolute", right: 15, zIndex: 100}}>
+                            <Image style={{width: 38, height: 38, borderRadius: 25}} source={`https://hannah-pfp.s3.us-east-1.amazonaws.com/${user}.jpeg`}/>
+                        </TouchableOpacity>
+                    </Link>}
+
+                    <KeyboardAvoidingView keyboardVerticalOffset={75} behavior="padding" style={{backgroundColor: "", height: "100%", flex: 1, gap: 0, flexDirection: "column"}}>
+                        <FlatList onRefresh={loadData} refreshing={loadingData} indicatorStyle="black" scrollIndicatorInsets={{right: 2}} style={{backgroundColor: "", paddingTop: 0, paddingHorizontal: 15}} data={messages} renderItem={(item) => <Message last={item.index === messages.length - 1} item={item.item} index={item.index} user={user}/>}/>
+
+                        {(stage === "initial" || stage === "friend_ask") && <SearchMessageBox message={message} setMessage={setMessage} onSend={send} setValue={setFriend}/>}
+                        {stage === "school_ask_ai" && <MessageBox message={message} setMessage={setMessage} onSend={send}/>}
+                        {stage === "school_ask" && <OptionsMessageBox message={message} setMessage={setMessage} onSend={send} options={SCHOOLS}/>}
+                        {stage === "grade_ask_ai" && <MessageBox message={message} setMessage={setMessage} onSend={send}/>}
+                        {stage === "grade_ask" && <MessageBox type={"numeric"} message={message} setMessage={setMessage} onSend={send}/>}
+                    </KeyboardAvoidingView>
+
+                    <LinearGradient colors={['rgb(255 251 235)', 'rgba(255, 255, 255, 0)']} locations={[0.01, user ? 0.15 : 0.05]} style={{position: "absolute", top: 0, left: 0, right: 0, bottom: 0, pointerEvents: "none", zIndex: 50}}/>
+                </GestureHandlerRootView>
+            </SafeAreaView>
+            <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'auto'}/>
+    </>
 }
